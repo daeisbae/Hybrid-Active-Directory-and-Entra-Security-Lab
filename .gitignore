@@ -6,6 +6,7 @@
 *.tfplan
 crash.log
 crash.*.log
+.terraform.lock.hcl
 
 # Local OS metadata
 .DS_Store

@@ -38,6 +38,8 @@ Create `dc01` as a Windows Server VM in Azure. The Terraform deployment creates 
 
 Set the VNet DNS server to the private IP address of `dc01` after AD DS and DNS are installed. This lets `winclient01` find the domain during domain join.
 
+![server manager local server dc01](evidence/01-server-manager-local-server-dc01.png)
+
 ### 2.2 Install AD DS and DNS
 
 Install the AD DS and DNS roles on `dc01`, then create a new forest named `lab.daehyung.dev`.
@@ -45,6 +47,8 @@ Install the AD DS and DNS roles on `dc01`, then create a new forest named `lab.d
 ```powershell
 Install-WindowsFeature AD-Domain-Services,DNS -IncludeManagementTools
 ```
+
+![server manager ad ds tasks](evidence/02-server-manager-ad-ds-tasks.png)
 
 After the role install, promote the server to a new forest.
 
@@ -57,6 +61,8 @@ Install-ADDSForest `
 ```
 
 After the restart, sign in with a domain admin account.
+
+![aduc domain controller initial](evidence/03-aduc-domain-controller-initial.png)
 
 
 ### 2.3 Create the OU Structure
@@ -156,6 +162,16 @@ Add-ADGroupMember -Identity "GRP_SEN_Responder" -Members "charlie"
 Add-ADGroupMember -Identity "GRP_HD_PwdReset" -Members "bob"
 ```
 
+If a group creation command fails, fix the object path or duplicate name before continuing.
+
+![powershell group creation troubleshooting](evidence/06-powershell-group-creation-troubleshooting.png)
+
+Confirm the groups and lab users in Active Directory Users and Computers.
+
+![aduc lab groups created](evidence/07-aduc-lab-groups-created.png)
+
+![aduc lab users alice bob](evidence/08-aduc-lab-users-alice-bob.png)
+
 
 ### 2.5 Configure GPO Baselines
 
@@ -175,18 +191,21 @@ For AD DS monitoring, enable audit categories for account management, security g
 
 ## 3. Verify `lab.daehyung.dev` in Microsoft Entra
 
-The AD DS domain and user UPN suffix are both `lab.daehyung.dev`. Before syncing users, verify `lab.daehyung.dev` as a custom domain in Microsoft Entra ID.
-
-In Microsoft Entra admin center, go to **Identity > Settings > Domain names**, add `lab.daehyung.dev`, then create the TXT record in public DNS for `daehyung.dev`.
-
-After Microsoft Entra verifies the domain, synced users can keep UPNs such as `alice@lab.daehyung.dev`.
+The AD DS domain and user UPN suffix are both `lab.daehyung.dev`. Confirm that the on-premises user already has the lab UPN suffix.
 
 ```powershell
 Get-ADUser alice -Properties UserPrincipalName | Select-Object UserPrincipalName
 ```
 
-![aduc alice upn lab daehyung dev](evidence/08-aduc-alice-upn-lab-daehyung-dev.png)
+![aduc alice upn lab daehyung dev](evidence/09-aduc-alice-upn-lab-daehyung-dev.png)
 
+Before syncing users, verify `lab.daehyung.dev` as a custom domain in Microsoft Entra ID. In Microsoft Entra admin center, go to **Identity > Settings > Domain names**, add `lab.daehyung.dev`, then create the TXT record in public DNS for `daehyung.dev`.
+
+![entra custom domain names verified](evidence/10-entra-custom-domain-names-verified.png)
+
+![entra add custom domain lab daehyung dev](evidence/11-entra-add-custom-domain-lab-daehyung-dev.png)
+
+![entra custom domain dns txt record](evidence/12-entra-custom-domain-dns-txt-record.png)
 
 Now the user has an on-premises AD identity with a verified cloud sign-in name.
 
@@ -233,31 +252,37 @@ Get-Item "C:\Program Files\Microsoft Azure AD Sync\Bin\miiserver.exe" |
   Select-Object VersionInfo
 ```
 
-![entra connect get started](evidence/12-entra-connect-get-started.png)
+![entra connect get started](evidence/13-entra-connect-get-started.png)
 
-![entra connect welcome](evidence/13-entra-connect-welcome.png)
+![entra connect welcome](evidence/14-entra-connect-welcome.png)
 
-![entra connect connect to entra id empty](evidence/14-entra-connect-connect-to-entra-id-empty.png)
+![entra connect connect to entra id empty](evidence/15-entra-connect-connect-to-entra-id-empty.png)
 
-![entra create aadconnect admin user](evidence/17-entra-create-aadconnect-admin-user.png)
+Capture the tenant user list before the first sync so the synced-user proof has a baseline.
 
-![entra connect admin username entered](evidence/18-entra-connect-admin-username-entered.png)
+![entra users before sync default directory attached](evidence/16-entra-users-before-sync-default-directory-attached.png)
 
-![entra aadconnect admin hybrid identity admin role](evidence/19-entra-aadconnect-admin-hybrid-identity-admin-role.png)
+![entra users before sync default directory](evidence/17-entra-users-before-sync-default-directory.png)
 
-![entra connect enter entra admin](evidence/20-entra-connect-enter-entra-admin.png)
+![entra create aadconnect admin user](evidence/18-entra-create-aadconnect-admin-user.png)
 
-![entra connect connect to ad ds](evidence/21-entra-connect-connect-to-ad-ds.png)
+![entra connect admin username entered](evidence/19-entra-connect-admin-username-entered.png)
 
-![entra connect ready to configure](evidence/22-entra-connect-ready-to-configure.png)
+![entra aadconnect admin hybrid identity admin role](evidence/20-entra-aadconnect-admin-hybrid-identity-admin-role.png)
 
-![entra connect additional tasks](evidence/23-entra-connect-additional-tasks.png)
+![entra connect enter entra admin](evidence/21-entra-connect-enter-entra-admin.png)
 
-![entra connect optional features phs](evidence/24-entra-connect-optional-features-phs.png)
+![entra connect connect to ad ds](evidence/22-entra-connect-connect-to-ad-ds.png)
 
-![entra connect ou filtering lab synced](evidence/25-entra-connect-ou-filtering-lab-synced.png)
+![entra connect ready to configure](evidence/23-entra-connect-ready-to-configure.png)
 
-![powershell adsync scheduler status](evidence/26-powershell-adsync-scheduler-status.png)
+![entra connect additional tasks](evidence/24-entra-connect-additional-tasks.png)
+
+![entra connect optional features phs](evidence/25-entra-connect-optional-features-phs.png)
+
+![entra connect ou filtering lab synced](evidence/26-entra-connect-ou-filtering-lab-synced.png)
+
+![powershell adsync scheduler status](evidence/27-powershell-adsync-scheduler-status.png)
 
 ### 4.4 Force the First Sync
 
@@ -283,7 +308,9 @@ Expected result:
 - Objects from `lab_service_accounts` do not appear.
 - Synced users use the `lab.daehyung.dev` UPN suffix.
 
-<evidence screenshot - Microsoft Entra admin center showing synced users and groups from the lab OUs.>
+![entra synced users lab ou](evidence/28-entra-synced-users-lab-ou.png)
+
+![entra synced groups lab ou](evidence/29-entra-synced-groups-lab-ou.png)
 
 This proves that sync scoping is working and that the lab is not pushing every on-premises object into the cloud tenant.
 
@@ -582,38 +609,7 @@ If P2 is available, document or implement Privileged Identity Management for eli
 
 The README should never claim that Conditional Access or PIM was enforced unless the license and screenshots prove it.
 
-## 11. Evidence Timeline
-
-The screenshots below are ordered by capture sequence.
-
-![server manager local server dc01](evidence/01-server-manager-local-server-dc01.png)
-![server manager ad ds tasks](evidence/02-server-manager-ad-ds-tasks.png)
-![aduc domain controller initial](evidence/03-aduc-domain-controller-initial.png)
-![powershell create lab ou structure](evidence/04-powershell-create-lab-ou-structure.png)
-![aduc lab ou structure](evidence/05-aduc-lab-ou-structure.png)
-![powershell group creation troubleshooting](evidence/06-powershell-group-creation-troubleshooting.png)
-![aduc lab users alice bob](evidence/07-aduc-lab-users-alice-bob.png)
-![aduc alice upn lab daehyung dev](evidence/08-aduc-alice-upn-lab-daehyung-dev.png)
-![entra custom domain names verified](evidence/09-entra-custom-domain-names-verified.png)
-![entra add custom domain lab daehyung dev](evidence/10-entra-add-custom-domain-lab-daehyung-dev.png)
-![entra custom domain dns txt record](evidence/11-entra-custom-domain-dns-txt-record.png)
-![entra connect get started](evidence/12-entra-connect-get-started.png)
-![entra connect welcome](evidence/13-entra-connect-welcome.png)
-![entra connect connect to entra id empty](evidence/14-entra-connect-connect-to-entra-id-empty.png)
-![entra users before sync default directory attached](evidence/15-entra-users-before-sync-default-directory-attached.png)
-![entra users before sync default directory](evidence/16-entra-users-before-sync-default-directory.png)
-![entra create aadconnect admin user](evidence/17-entra-create-aadconnect-admin-user.png)
-![entra connect admin username entered](evidence/18-entra-connect-admin-username-entered.png)
-![entra aadconnect admin hybrid identity admin role](evidence/19-entra-aadconnect-admin-hybrid-identity-admin-role.png)
-![entra connect enter entra admin](evidence/20-entra-connect-enter-entra-admin.png)
-![entra connect connect to ad ds](evidence/21-entra-connect-connect-to-ad-ds.png)
-![entra connect ready to configure](evidence/22-entra-connect-ready-to-configure.png)
-![entra connect additional tasks](evidence/23-entra-connect-additional-tasks.png)
-![entra connect optional features phs](evidence/24-entra-connect-optional-features-phs.png)
-![entra connect ou filtering lab synced](evidence/25-entra-connect-ou-filtering-lab-synced.png)
-![powershell adsync scheduler status](evidence/26-powershell-adsync-scheduler-status.png)
-
-## 12. Evidence Checklist
+## 11. Evidence Checklist
 
 Use this checklist as the lab evidence pack.
 
@@ -622,23 +618,10 @@ Use this checklist as the lab evidence pack.
 - <evidence screenshot - terminal output showing terraform apply completed successfully with outputs for dc01, winclient01, and the Log Analytics workspace.>
 - <evidence screenshot - Azure Policy assignments showing required tag policies applied to the lab resource group.>
 - <evidence screenshot - nist-csf-2.0-mapping.md showing the lab evidence mapped to Govern, Identify, Protect, Detect, Respond, and Recover.>
-- AD Users and Computers OU structure:
-
-![aduc lab ou structure](evidence/05-aduc-lab-ou-structure.png)
-
-- Synced user UPN suffix:
-
-![aduc alice upn lab daehyung dev](evidence/08-aduc-alice-upn-lab-daehyung-dev.png)
-
-- Microsoft Entra Connect Sync configuration:
-
-![entra connect optional features phs](evidence/24-entra-connect-optional-features-phs.png)
-
-![entra connect ou filtering lab synced](evidence/25-entra-connect-ou-filtering-lab-synced.png)
-
-![powershell adsync scheduler status](evidence/26-powershell-adsync-scheduler-status.png)
-
-- <evidence screenshot - Microsoft Entra admin center showing synced users and groups from the lab OUs.>
+- AD Users and Computers OU structure captured in section 2.
+- Synced user UPN suffix captured in section 3.
+- Microsoft Entra Connect Sync configuration captured in section 4.
+- Microsoft Entra synced users and groups captured in section 5.
 - <evidence screenshot - winclient01 output from dsregcmd /status showing AzureAdJoined YES, DomainJoined YES, and DeviceAuthStatus SUCCESS.>
 - <evidence screenshot - Microsoft Entra Devices page showing winclient01 as a hybrid joined device.>
 - <evidence screenshot - Log Analytics or Sentinel showing SecurityEvent data from dc01 or winclient01.>
@@ -651,7 +634,7 @@ Use this checklist as the lab evidence pack.
 - <evidence screenshot - terraform plan showing RBAC role assignments for the synced Microsoft Entra groups.>
 - <evidence screenshot - Entra licensing or Security Defaults page showing why Conditional Access, PIM, or SigninLogs were implemented or documented as design-only.>
 
-## 13. Cloud Sync and Defender Portal Future Notes
+## 12. Cloud Sync and Defender Portal Future Notes
 
 This lab uses Microsoft Entra Connect Sync because many real environments still run hybrid AD DS with Connect Sync. The lab should still mention that Microsoft Entra Cloud Sync is the newer direction for many synchronization scenarios.
 
@@ -659,7 +642,7 @@ See [cloud-sync-migration-notes.md](cloud-sync-migration-notes.md) for the migra
 
 Microsoft Sentinel is also moving to the Microsoft Defender portal experience. Microsoft states that after March 31, 2027, Sentinel will no longer be supported in the Azure portal and will be available only in the Defender portal. This lab can be built with the available portal workflow, but the documentation should mention the Defender portal transition.
 
-## 14. Validation Checklist
+## 13. Validation Checklist
 
 Before calling the lab complete, verify each item.
 
@@ -678,7 +661,7 @@ Before calling the lab complete, verify each item.
 - Confirm the NIST CSF 2.0 mapping has evidence for Govern, Identify, Protect, Detect, Respond, and Recover.
 - Confirm implemented controls are separated from design-only controls blocked by licensing.
 
-## 15. References
+## 14. References
 
 - [Securing domain controllers against attack](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/securing-domain-controllers-against-attack)
 - [Microsoft Entra Connect prerequisites](https://learn.microsoft.com/en-us/entra/identity/hybrid/connect/how-to-connect-install-prerequisites)
