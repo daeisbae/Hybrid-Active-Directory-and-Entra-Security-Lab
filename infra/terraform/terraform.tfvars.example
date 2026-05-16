@@ -1,0 +1,37 @@
+resource_prefix = "hybrid-identity-lab"
+location        = "canadacentral"
+environment     = "lab"
+
+admin_username = "labadmin"
+admin_password = "ReplaceWith-A-Strong-Lab-Password-123!"
+
+# Set this to your public IP with /32 if you need direct RDP access.
+# If this stays null, Terraform creates no public IPs and no inbound RDP rule.
+admin_source_ip_cidr = null
+
+vnet_address_space     = "10.10.0.0/16"
+identity_subnet_prefix = "10.10.1.0/24"
+dc_private_ip          = "10.10.1.10"
+
+dc_vm_size     = "Standard_B2ms"
+client_vm_size = "Standard_B2s"
+
+log_retention_days = 30
+
+# Keep false during the first apply. Set true after SecurityEvent data exists.
+deploy_sentinel_analytics = false
+
+enable_required_tag_policy = true
+
+extra_tags = {
+  owner       = "daehyung"
+  cost_center = "student-lab"
+}
+
+# Add group object IDs after AD groups sync into Microsoft Entra ID.
+rbac_group_object_ids = {
+  subscription_reader  = null
+  log_analytics_reader = null
+  sentinel_responder   = null
+  sentinel_contributor = null
+}
