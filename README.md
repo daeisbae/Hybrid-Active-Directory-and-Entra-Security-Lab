@@ -30,66 +30,15 @@ The architecture is intentionally small. The lab should prove the identity path 
 > [!NOTE]
 > `dc01` combines AD DS, DNS, and Entra Connect Sync for cost control. A separate `sync01` member server is the better design for a work environment because it separates the domain controller from the sync engine and its cloud connectivity.
 
-## 2. Cost, Licensing, and Student-Budget Decisions
+## 2. Build `dc01` with AD DS, DNS, OUs, Groups, and GPOs
 
-Use Azure for Students or another student subscription if available. The main cost drivers are VM runtime, managed disks, Log Analytics ingestion, Log Analytics retention, and Microsoft Sentinel ingestion.
-
-Keep the VMs stopped when they are not being used. Start with narrow Windows event collection instead of collecting every event channel.
-
-This lab assumes Microsoft Entra Free unless the tenant license page proves that Microsoft Entra ID P1 or P2 is available.
-
-| Feature | Student-budget plan |
-| --- | --- |
-| Security Defaults | Use as the baseline if Conditional Access is unavailable |
-| Conditional Access | Implement only if P1 is available; otherwise document the design |
-| Privileged Identity Management | Implement only if P2 or Entra ID Governance is available; otherwise document the design |
-| Entra audit logs in Sentinel | Use if the connector is available |
-| Entra sign-in logs in Sentinel | Use only if P1 or P2 is available |
-| Entra Connect Health | Document as unavailable if P1 or P2 is not available |
-
-<evidence screenshot - Entra licensing or Security Defaults page showing why Conditional Access, PIM, or SigninLogs were implemented or documented as design-only.>
-
-The README should be honest about what was implemented and what was only designed. That makes the lab easier to defend in an interview.
-
-### 2.1 Terraform Automation and NIST CSF 2.0
-
-Terraform deploys the Azure foundation for this lab:
-
-- Resource group
-- VNet, subnet, DNS setting, and NSG
-- `dc01` and `winclient01`
-- Optional public IPs and a restricted RDP rule
-- Log Analytics workspace
-- Microsoft Sentinel onboarding
-- Azure Monitor Agent extensions
-- Data Collection Rule for selected Windows Security events
-- Required-tag Azure Policy assignments
-- Optional RBAC assignments after AD groups sync into Microsoft Entra ID
-- Optional Sentinel scheduled analytics rules after `SecurityEvent` data exists
-
-The Terraform files are in [infra/terraform](infra/terraform). Use them before the Windows and Entra configuration steps.
-
-<evidence screenshot - terminal output showing terraform plan with the resource group, VMs, VNet, NSG, Log Analytics workspace, Sentinel onboarding, AMA extensions, DCR, and tag policy assignments ready to deploy.>
-
-<evidence screenshot - terminal output showing terraform apply completed successfully with outputs for dc01, winclient01, and the Log Analytics workspace.>
-
-Terraform does not configure AD DS, OUs, GPOs, Entra Connect Sync, or hybrid join. Those steps need Windows and portal validation evidence, so the README keeps them as guided lab work.
-
-This lab follows NIST Cybersecurity Framework 2.0 across the six CSF functions: Govern, Identify, Protect, Detect, Respond, and Recover. The practical mapping is in [nist-csf-2.0-mapping.md](nist-csf-2.0-mapping.md).
-
-<evidence screenshot - Azure Policy assignments showing required tag policies applied to the lab resource group.>
-
-<evidence screenshot - nist-csf-2.0-mapping.md showing the lab evidence mapped to Govern, Identify, Protect, Detect, Respond, and Recover.>
-
-## 3. Build `dc01` with AD DS, DNS, OUs, Groups, and GPOs
-
-### 3.1 Create the Windows Server VM
+### 2.1 Create the Windows Server VM
 
 Create `dc01` as a Windows Server VM in Azure. The Terraform deployment creates the VM, lab VNet, and static private IP address.
 
 Set the VNet DNS server to the private IP address of `dc01` after AD DS and DNS are installed. This lets `winclient01` find the domain during domain join.
 
-### 3.2 Install AD DS and DNS
+### 2.2 Install AD DS and DNS
 
 Install the AD DS and DNS roles on `dc01`, then create a new forest named `lab.daehyung.dev`.
 
@@ -110,7 +59,7 @@ Install-ADDSForest `
 After the restart, sign in with a domain admin account.
 
 
-### 3.3 Create the OU Structure
+### 2.3 Create the OU Structure
 
 Create OUs that separate synced identities from non-synced service accounts.
 
@@ -154,7 +103,7 @@ New-ADOrganizationalUnit -Name "lab_admins" -Path "OU=lab_privileged,OU=lab,$roo
 We will scope Entra Connect Sync to the OUs that belong in Microsoft Entra ID. `lab_service_accounts` stays out of scope to show that service accounts should not sync by default.
 
 
-### 3.4 Create Lab Users and Groups
+### 2.4 Create Lab Users and Groups
 
 Create test users in `lab_users` and lab-specific groups in `lab_groups`.
 
@@ -208,7 +157,7 @@ Add-ADGroupMember -Identity "GRP_HD_PwdReset" -Members "bob"
 ```
 
 
-### 3.5 Configure GPO Baselines
+### 2.5 Configure GPO Baselines
 
 Create a small set of GPOs that generate security evidence and are easy to explain.
 
@@ -224,7 +173,7 @@ Recommended GPOs:
 
 For AD DS monitoring, enable audit categories for account management, security group management, logon, Kerberos activity, and directory service changes. Event ID `5136` needs the right directory object auditing to show object modification details.
 
-## 4. Verify `lab.daehyung.dev` in Microsoft Entra
+## 3. Verify `lab.daehyung.dev` in Microsoft Entra
 
 The AD DS domain and user UPN suffix are both `lab.daehyung.dev`. Before syncing users, verify `lab.daehyung.dev` as a custom domain in Microsoft Entra ID.
 
@@ -241,15 +190,15 @@ Get-ADUser alice -Properties UserPrincipalName | Select-Object UserPrincipalName
 
 Now the user has an on-premises AD identity with a verified cloud sign-in name.
 
-## 5. Install and Configure Microsoft Entra Connect Sync on `dc01`
+## 4. Install and Configure Microsoft Entra Connect Sync on `dc01`
 
-### 5.1 Lab Design Note
+### 4.1 Lab Design Note
 
 We will install Microsoft Entra Connect Sync on `dc01` for this v1 lab. This is a cost-saving choice, not the preferred production design.
 
 Microsoft documents that the Microsoft Entra Connect server is a Tier 0 component and should be hardened. Microsoft also recommends securing domain controllers more strictly than normal infrastructure. Combining the roles means one VM carries both sets of risk, so the README must call this out.
 
-### 5.2 Prepare `dc01`
+### 4.2 Prepare `dc01`
 
 Before installing Entra Connect Sync:
 
@@ -260,7 +209,7 @@ Before installing Entra Connect Sync:
 - Confirm the Entra account used for setup has the required role assigned directly. Group membership alone does not meet this setup requirement.
 
 
-### 5.3 Use Custom Settings
+### 4.3 Use Custom Settings
 
 Download Microsoft Entra Connect Sync from the Microsoft Entra admin center and run the installer on `dc01`.
 
@@ -310,7 +259,7 @@ Get-Item "C:\Program Files\Microsoft Azure AD Sync\Bin\miiserver.exe" |
 
 ![powershell adsync scheduler status](evidence/26-powershell-adsync-scheduler-status.png)
 
-### 5.4 Force the First Sync
+### 4.4 Force the First Sync
 
 After the wizard completes, force a sync if needed.
 
@@ -322,7 +271,7 @@ Start-ADSyncSyncCycle -PolicyType Delta
 Use the Synchronization Service Manager to confirm that exports to Microsoft Entra ID are successful.
 
 
-## 6. Verify Synced Users and Groups in Microsoft Entra
+## 5. Verify Synced Users and Groups in Microsoft Entra
 
 Open the Microsoft Entra admin center and check the synced users and groups.
 
@@ -338,7 +287,7 @@ Expected result:
 
 This proves that sync scoping is working and that the lab is not pushing every on-premises object into the cloud tenant.
 
-## 7. Build and Domain-Join `winclient01`
+## 6. Build and Domain-Join `winclient01`
 
 Create `winclient01` as a Windows 11 VM or a Windows Server member system. The Terraform deployment uses Windows Server by default so the image is easy to deploy in a student subscription. A Windows client OS is better for showing endpoint identity behavior, but a member server can still prove the basic domain and hybrid join path.
 
@@ -366,7 +315,7 @@ whoami
 gpresult /r
 ```
 
-## 8. Configure and Validate Hybrid Join
+## 7. Configure and Validate Hybrid Join
 
 Configure Microsoft Entra hybrid join for the domain-joined device.
 
@@ -399,15 +348,15 @@ Then confirm the device in Microsoft Entra.
 
 If registration fails, save the `dsregcmd /status` diagnostics. The output can show whether the issue is AD connectivity, SCP configuration, DRS discovery, or token acquisition.
 
-## 9. Configure Log Analytics, AMA, and Microsoft Sentinel
+## 8. Configure Log Analytics, AMA, and Microsoft Sentinel
 
-### 9.1 Create the Workspace and Enable Sentinel
+### 8.1 Create the Workspace and Enable Sentinel
 
 Create the Log Analytics workspace `law-hybrid-identity-lab`, then enable Microsoft Sentinel on the workspace.
 
 Sentinel is tied to the workspace. It is not another Windows server.
 
-### 9.2 Collect Windows Security Events
+### 8.2 Collect Windows Security Events
 
 Use Azure Monitor Agent and a Data Collection Rule to collect Windows security events from `dc01` and `winclient01`.
 
@@ -436,17 +385,17 @@ Recommended event IDs:
 
 <evidence screenshot - Log Analytics or Sentinel showing SecurityEvent data from dc01 or winclient01.>
 
-### 9.3 Connect Microsoft Entra Logs
+### 8.3 Connect Microsoft Entra Logs
 
 Use the Microsoft Entra ID data connector in Sentinel.
 
 Collect audit logs if available. Collect sign-in logs only if the tenant has Microsoft Entra ID P1 or P2. Microsoft documents that P1 or P2 is required to ingest sign-in logs into Sentinel.
 
-## 10. Create and Test KQL Detections
+## 9. Create and Test KQL Detections
 
 Each detection should have a test action, a KQL query, and evidence.
 
-### 10.1 Privileged AD Group Membership Changes
+### 9.1 Privileged AD Group Membership Changes
 
 Test action: add a test user to one lab admin group, then remove the user.
 
@@ -487,7 +436,7 @@ SecurityEvent
 
 This detection shows when an identity gains or loses privileged access through AD group membership.
 
-### 10.2 Password Reset, Disabled Account, or Deleted Account Activity
+### 9.2 Password Reset, Disabled Account, or Deleted Account Activity
 
 Test action: reset a test user's password, disable the account, then re-enable it.
 
@@ -510,7 +459,7 @@ SecurityEvent
 
 This detection helps review account takeover response actions and suspicious account administration.
 
-### 10.3 GPO or AD Object Modification Trail
+### 9.3 GPO or AD Object Modification Trail
 
 Test action: change a safe setting in a test GPO.
 
@@ -528,7 +477,7 @@ SecurityEvent
 
 This detection shows changes to AD objects that can affect many users or computers.
 
-### 10.4 New Privileged Role Assignment in Microsoft Entra
+### 9.4 New Privileged Role Assignment in Microsoft Entra
 
 Test action: assign a low-risk test role to a lab group if the tenant allows it, then remove it.
 
@@ -550,7 +499,7 @@ AuditLogs
 
 This detection shows cloud-side privileged role assignment activity.
 
-### 10.5 Failed Entra Sign-In Spike
+### 9.5 Failed Entra Sign-In Spike
 
 Use this only if `SigninLogs` is available in the workspace.
 
@@ -573,7 +522,7 @@ SigninLogs
 
 If `SigninLogs` is not available because the tenant lacks P1 or P2, keep this as a design-only detection and explain the licensing limit.
 
-### 10.6 Sentinel Analytic Rule
+### 9.6 Sentinel Analytic Rule
 
 Turn one validated query into a scheduled analytics rule in Sentinel.
 
@@ -583,9 +532,9 @@ Recommended first rule: privileged AD group membership changes.
 
 The analytic rule proves that the lab can turn identity activity into an alert workflow.
 
-## 11. RBAC, Emergency Access, and Conditional Access Design
+## 10. RBAC, Emergency Access, and Conditional Access Design
 
-### 11.1 Azure and Sentinel RBAC
+### 10.1 Azure and Sentinel RBAC
 
 Use group-based access instead of assigning users directly.
 
@@ -604,7 +553,7 @@ After the AD groups sync into Microsoft Entra ID, add their object IDs to `infra
 
 <evidence screenshot - terraform plan showing RBAC role assignments for the synced Microsoft Entra groups.>
 
-### 11.2 Emergency Access Accounts
+### 10.2 Emergency Access Accounts
 
 Create two cloud-only emergency access accounts. These accounts should not depend on AD DS, Entra Connect Sync, or the normal admin authentication path.
 
@@ -618,7 +567,7 @@ Document:
 
 Do not sync emergency access accounts from AD DS.
 
-### 11.3 Security Defaults, Conditional Access, and PIM
+### 10.3 Security Defaults, Conditional Access, and PIM
 
 If the tenant only has Entra Free, use Security Defaults for baseline MFA behavior and document Conditional Access as a target design.
 
@@ -633,7 +582,7 @@ If P2 is available, document or implement Privileged Identity Management for eli
 
 The README should never claim that Conditional Access or PIM was enforced unless the license and screenshots prove it.
 
-## 12. Evidence Timeline
+## 11. Evidence Timeline
 
 The screenshots below are ordered by capture sequence.
 
@@ -664,7 +613,7 @@ The screenshots below are ordered by capture sequence.
 ![entra connect ou filtering lab synced](evidence/25-entra-connect-ou-filtering-lab-synced.png)
 ![powershell adsync scheduler status](evidence/26-powershell-adsync-scheduler-status.png)
 
-## 13. Evidence Checklist
+## 12. Evidence Checklist
 
 Use this checklist as the lab evidence pack.
 
@@ -702,7 +651,7 @@ Use this checklist as the lab evidence pack.
 - <evidence screenshot - terraform plan showing RBAC role assignments for the synced Microsoft Entra groups.>
 - <evidence screenshot - Entra licensing or Security Defaults page showing why Conditional Access, PIM, or SigninLogs were implemented or documented as design-only.>
 
-## 14. Cloud Sync and Defender Portal Future Notes
+## 13. Cloud Sync and Defender Portal Future Notes
 
 This lab uses Microsoft Entra Connect Sync because many real environments still run hybrid AD DS with Connect Sync. The lab should still mention that Microsoft Entra Cloud Sync is the newer direction for many synchronization scenarios.
 
@@ -710,7 +659,7 @@ See [cloud-sync-migration-notes.md](cloud-sync-migration-notes.md) for the migra
 
 Microsoft Sentinel is also moving to the Microsoft Defender portal experience. Microsoft states that after March 31, 2027, Sentinel will no longer be supported in the Azure portal and will be available only in the Defender portal. This lab can be built with the available portal workflow, but the documentation should mention the Defender portal transition.
 
-## 15. Validation Checklist
+## 14. Validation Checklist
 
 Before calling the lab complete, verify each item.
 
@@ -729,7 +678,7 @@ Before calling the lab complete, verify each item.
 - Confirm the NIST CSF 2.0 mapping has evidence for Govern, Identify, Protect, Detect, Respond, and Recover.
 - Confirm implemented controls are separated from design-only controls blocked by licensing.
 
-## 16. References
+## 15. References
 
 - [Securing domain controllers against attack](https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/plan/security-best-practices/securing-domain-controllers-against-attack)
 - [Microsoft Entra Connect prerequisites](https://learn.microsoft.com/en-us/entra/identity/hybrid/connect/how-to-connect-install-prerequisites)
