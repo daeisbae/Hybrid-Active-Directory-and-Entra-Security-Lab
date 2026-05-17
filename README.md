@@ -326,13 +326,29 @@ Join the domain.
 Add-Computer -DomainName "lab.daehyung.dev" -Restart
 ```
 
+![winclient01 domain join command](evidence/30-winclient01-domain-join-command.png)
+
+![winclient01 domain join credential request](evidence/31-winclient01-domain-join-credential-request.png)
+
+After the restart, `winclient01` can sign in with a LAB domain account.
+
+![winclient01 domain sign in lab admin](evidence/34-winclient01-domain-sign-in-lab-admin.png)
+
 After restart, move the computer object into the `lab_computers` OU.
+
+The first ADUC view shows `WINCLIENT01` in the default `Computers` container.
+
+![aduc winclient01 default computers container](evidence/32-aduc-winclient01-default-computers-container.png)
 
 ```powershell
 Move-ADObject `
   -Identity "CN=WINCLIENT01,CN=Computers,DC=lab,DC=daehyung,DC=dev" `
   -TargetPath "OU=lab_computers,OU=lab_synced,OU=lab,DC=lab,DC=daehyung,DC=dev"
 ```
+
+The PowerShell output confirms that `WINCLIENT01` now has a distinguished name under `lab_computers`.
+
+![powershell move winclient01 lab computers](evidence/33-powershell-move-winclient01-lab-computers.png)
 
 Apply GPO and confirm domain identity.
 
@@ -341,6 +357,8 @@ gpupdate /force
 whoami
 gpresult /r
 ```
+
+![winclient01 gpresult domain policy](evidence/35-winclient01-gpresult-domain-policy.png)
 
 ## 7. Configure and Validate Hybrid Join
 
@@ -622,6 +640,7 @@ Use this checklist as the lab evidence pack.
 - Synced user UPN suffix captured in section 3.
 - Microsoft Entra Connect Sync configuration captured in section 4.
 - Microsoft Entra synced users and groups captured in section 5.
+- Windows client domain join, `lab_computers` OU move, and `gpresult` output captured in section 6.
 - <evidence screenshot - winclient01 output from dsregcmd /status showing AzureAdJoined YES, DomainJoined YES, and DeviceAuthStatus SUCCESS.>
 - <evidence screenshot - Microsoft Entra Devices page showing winclient01 as a hybrid joined device.>
 - <evidence screenshot - Log Analytics or Sentinel showing SecurityEvent data from dc01 or winclient01.>
