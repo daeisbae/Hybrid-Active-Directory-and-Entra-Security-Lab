@@ -10,3 +10,5 @@ crash.*.log
 
 # Local OS metadata
 .DS_Store
+
+evidence-raw/
