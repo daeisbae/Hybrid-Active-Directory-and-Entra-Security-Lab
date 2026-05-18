@@ -80,9 +80,7 @@ resource "azurerm_monitor_data_collection_rule_association" "winclient01" {
 
 locals {
   privileged_group_changes_query = <<-KQL
-    SecurityEvent
-    | where EventID in (4728, 4729, 4732, 4733, 4756, 4757)
-    | where RenderedDescription has_any (
+    let PrivilegedGroups = dynamic([
         "Azure Subscription Reader",
         "Log Analytics Reader",
         "Sentinel Responder",
@@ -100,8 +98,13 @@ locals {
         "Administrators",
         "Schema Admins",
         "Account Operators"
-    )
-    | project TimeGenerated, Computer, EventID, Account, RenderedDescription
+    ]);
+    SecurityEvent
+    | where EventID in (4728, 4729, 4732, 4733, 4756, 4757)
+    | where TargetUserName has_any (PrivilegedGroups)
+        or TargetAccount has_any (PrivilegedGroups)
+        or MemberName has_any (PrivilegedGroups)
+    | project TimeGenerated, Computer, EventID, Activity, Account, SubjectAccount, TargetAccount, TargetUserName, MemberName
   KQL
 
   password_account_admin_query = <<-KQL
@@ -113,8 +116,8 @@ locals {
   gpo_change_query = <<-KQL
     SecurityEvent
     | where EventID == 5136
-    | where RenderedDescription has "CN=Policies,CN=System"
-    | project TimeGenerated, Computer, Account, RenderedDescription
+    | where ObjectName has "CN=Policies,CN=System"
+    | project TimeGenerated, Computer, Account, SubjectAccount, ObjectName, ObjectType, OperationType
   KQL
 }
 
