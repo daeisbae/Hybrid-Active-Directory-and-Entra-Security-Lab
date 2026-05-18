@@ -385,11 +385,13 @@ DomainJoined  : YES
 DeviceAuthStatus : SUCCESS
 ```
 
-<evidence screenshot - winclient01 output from dsregcmd /status showing AzureAdJoined YES, DomainJoined YES, and DeviceAuthStatus SUCCESS.>
+![winclient01 dsregcmd hybrid join status](evidence/36-winclient01-dsregcmd-hybrid-join-status.png)
 
 Then confirm the device in Microsoft Entra.
 
-<evidence screenshot - Microsoft Entra Devices page showing winclient01 as a hybrid joined device.>
+The Entra device list shows `winclient01` as enabled, Windows-based, and Microsoft Entra hybrid joined.
+
+![entra devices winclient01 hybrid joined](evidence/37-entra-devices-winclient01-hybrid-joined.png)
 
 If registration fails, save the `dsregcmd /status` diagnostics. The output can show whether the issue is AD connectivity, SCP configuration, DRS discovery, or token acquisition.
 
@@ -406,6 +408,8 @@ Sentinel is tied to the workspace. It is not another Windows server.
 Use Azure Monitor Agent and a Data Collection Rule to collect Windows security events from `dc01` and `winclient01`.
 
 Start narrow. Collect events needed for identity administration and AD change tracking first.
+
+For Sentinel detections, send the Windows Security events to the `SecurityEvent` table. A standard Azure Monitor Windows Event Logs DCR sends Windows events to the `Event` table. The Terraform in `infra/terraform/monitoring.tf` uses the `Microsoft-SecurityEvent` stream so the section 9 KQL queries can run against `SecurityEvent`.
 
 Recommended event IDs:
 
@@ -428,7 +432,17 @@ Recommended event IDs:
 | `4771` | Kerberos pre-authentication failed |
 | `5136` | Directory object modified |
 
-<evidence screenshot - Log Analytics or Sentinel showing SecurityEvent data from dc01 or winclient01.>
+![sentinel securityevent data dc01](evidence/38-sentinel-securityevent-data-dc01.png)
+
+Before creating an analytics rule, confirm that the table has data:
+
+```kql
+SecurityEvent
+| where TimeGenerated > ago(1h)
+| summarize Events=count() by Computer
+```
+
+![sentinel securityevent summary dc01](evidence/39-sentinel-securityevent-summary-dc01.png)
 
 ### 8.3 Connect Microsoft Entra Logs
 
@@ -452,9 +466,7 @@ Remove-ADGroupMember -Identity "GRP_SRV_LocalAdmins" -Members "alice" -Confirm:$
 KQL:
 
 ```kql
-SecurityEvent
-| where EventID in (4728, 4729, 4732, 4733, 4756, 4757)
-| where RenderedDescription has_any (
+let PrivilegedGroups = dynamic([
     "Azure Subscription Reader",
     "Log Analytics Reader",
     "Sentinel Responder",
@@ -472,8 +484,13 @@ SecurityEvent
     "Administrators",
     "Schema Admins",
     "Account Operators"
-)
-| project TimeGenerated, Computer, EventID, Account, RenderedDescription
+]);
+SecurityEvent
+| where EventID in (4728, 4729, 4732, 4733, 4756, 4757)
+| where TargetUserName has_any (PrivilegedGroups)
+    or TargetAccount has_any (PrivilegedGroups)
+    or MemberName has_any (PrivilegedGroups)
+| project TimeGenerated, Computer, EventID, Activity, Account, SubjectAccount, TargetAccount, TargetUserName, MemberName
 | order by TimeGenerated desc
 ```
 
@@ -513,8 +530,8 @@ KQL:
 ```kql
 SecurityEvent
 | where EventID == 5136
-| where RenderedDescription has "CN=Policies,CN=System"
-| project TimeGenerated, Computer, Account, RenderedDescription
+| where ObjectName has "CN=Policies,CN=System"
+| project TimeGenerated, Computer, Account, SubjectAccount, ObjectName, ObjectType, OperationType
 | order by TimeGenerated desc
 ```
 
@@ -569,9 +586,33 @@ If `SigninLogs` is not available because the tenant lacks P1 or P2, keep this as
 
 ### 9.6 Sentinel Analytic Rule
 
-Turn one validated query into a scheduled analytics rule in Sentinel.
+Turn one validated query into a scheduled analytics rule in Sentinel. Do this after `SecurityEvent` data is visible in Log Analytics.
 
 Recommended first rule: privileged AD group membership changes.
+
+Portal path:
+
+1. Open Microsoft Sentinel for `law-hybrid-identity-lab`.
+2. Go to `Analytics`.
+3. Select `Create` > `Scheduled query rule`.
+4. Name the rule `AD privileged group membership changes`.
+5. Paste the section 9.1 KQL query.
+6. Set query frequency to `1 hour` and lookup period to `1 hour`.
+7. Set alert threshold to generate an alert when query results are greater than `0`.
+8. Leave incident creation enabled.
+9. Create the rule, then repeat the section 9.1 test action to generate an alert or incident.
+
+Terraform path:
+
+1. Keep `deploy_sentinel_analytics = false` for the first apply.
+2. Confirm that `SecurityEvent` has records from `dc01` or `winclient01`.
+3. Set `deploy_sentinel_analytics = true` in `infra/terraform/terraform.tfvars`.
+4. Run Terraform again from `infra/terraform`.
+
+```bash
+terraform plan -out tfplan
+terraform apply tfplan
+```
 
 <evidence screenshot - Sentinel analytic rule or incident generated from one validated lab detection.>
 
@@ -641,9 +682,8 @@ Use this checklist as the lab evidence pack.
 - Microsoft Entra Connect Sync configuration captured in section 4.
 - Microsoft Entra synced users and groups captured in section 5.
 - Windows client domain join, `lab_computers` OU move, and `gpresult` output captured in section 6.
-- <evidence screenshot - winclient01 output from dsregcmd /status showing AzureAdJoined YES, DomainJoined YES, and DeviceAuthStatus SUCCESS.>
-- <evidence screenshot - Microsoft Entra Devices page showing winclient01 as a hybrid joined device.>
-- <evidence screenshot - Log Analytics or Sentinel showing SecurityEvent data from dc01 or winclient01.>
+- Hybrid join status and Microsoft Entra device registration captured in section 7.
+- Log Analytics/Sentinel `SecurityEvent` ingestion captured in section 8.
 - <evidence screenshot - KQL results for privileged AD group membership changes after adding and removing a test user.>
 - <evidence screenshot - KQL results for password reset, account disable, or account delete activity against a test user.>
 - <evidence screenshot - KQL results for Event ID 5136 after changing a test GPO setting.>
