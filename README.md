@@ -524,7 +524,8 @@ Keep role assignment cumulative behavior in mind. If a user has multiple role pa
 
 After the AD groups sync into Microsoft Entra ID, add their object IDs to `infra/terraform/terraform.tfvars` and run Terraform again. Terraform can then assign the Azure and Sentinel roles from code.
 
-<evidence screenshot - terraform plan showing RBAC role assignments for the synced Microsoft Entra groups.>
+![terraform plan showing RBAC role assignments for the synced Microsoft Entra groups 1st](evidence/57-tf-plan-1.png)
+![terraform plan showing RBAC role assignments for the synced Microsoft Entra groups 2nd](evidence/58-tf-plan-2.png)
 
 ### 9.2 Emergency Access Accounts
 
@@ -557,8 +558,3 @@ Implement a small pilot Conditional Access policy:
 - [Microsoft Entra Connect accounts and permissions](https://learn.microsoft.com/en-us/entra/identity/hybrid/connect/reference-connect-accounts-permissions)
 - [Microsoft Entra Connect Sync service account](https://learn.microsoft.com/en-us/entra/identity/hybrid/connect/concept-adsync-service-account)
 - [Microsoft Entra hybrid join verification](https://learn.microsoft.com/en-gb/entra/identity/devices/how-to-hybrid-join-verify)
-- [Send Microsoft Entra ID data to Microsoft Sentinel](https://learn.microsoft.com/en-us/azure/sentinel/connect-azure-active-directory)
-- [Microsoft Sentinel in the Microsoft Defender portal](https://learn.microsoft.com/en-us/azure/sentinel/microsoft-sentinel-defender-portal)
-- [Microsoft Entra data retention](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/reference-reports-data-retention)
-- [NIST Cybersecurity Framework](https://www.nist.gov/cyberframework)
-- [NIST Cybersecurity Framework 2.0](https://doi.org/10.6028/NIST.CSWP.29)
