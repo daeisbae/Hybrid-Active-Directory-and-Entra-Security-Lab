@@ -136,8 +136,6 @@ Add-ADGroupMember -Identity "GRP_SEN_Responder" -Members "charlie"
 Add-ADGroupMember -Identity "GRP_HD_PwdReset" -Members "bob"
 ```
 
-If a group creation command fails, fix the object path or duplicate name before continuing.
-
 ![powershell group creation troubleshooting](evidence/06-powershell-group-creation-troubleshooting.png)
 
 Confirm the groups and lab users in Active Directory Users and Computers.
