@@ -463,6 +463,8 @@ Add-ADGroupMember -Identity "GRP_SRV_LocalAdmins" -Members "alice"
 Remove-ADGroupMember -Identity "GRP_SRV_LocalAdmins" -Members "alice" -Confirm:$false
 ```
 
+![powershell privileged group membership test action](evidence/40-powershell-privileged-group-membership-test-action.png)
+
 KQL:
 
 ```kql
@@ -494,7 +496,7 @@ SecurityEvent
 | order by TimeGenerated desc
 ```
 
-<evidence screenshot - KQL results for privileged AD group membership changes after adding and removing a test user.>
+![sentinel privileged group membership kql results](evidence/41-sentinel-privileged-group-membership-kql-results.png)
 
 This detection shows when an identity gains or loses privileged access through AD group membership.
 
@@ -508,6 +510,8 @@ Disable-ADAccount -Identity "alice"
 Enable-ADAccount -Identity "alice"
 ```
 
+![powershell password account admin test action](evidence/42-powershell-password-account-admin-test-action.png)
+
 KQL:
 
 ```kql
@@ -517,13 +521,17 @@ SecurityEvent
 | order by TimeGenerated desc
 ```
 
-<evidence screenshot - KQL results for password reset, account disable, or account delete activity against a test user.>
+![sentinel password account admin kql results](evidence/43-sentinel-password-account-admin-kql-results.png)
 
 This detection helps review account takeover response actions and suspicious account administration.
 
 ### 9.3 GPO or AD Object Modification Trail
 
 Test action: change a safe setting in a test GPO.
+
+![gpmc lab domain gpo management](evidence/44-gpmc-lab-domain-gpo-management.png)
+
+![gpmc test gpo linked lab computers](evidence/45-gpmc-test-gpo-linked-lab-computers.png)
 
 KQL:
 
@@ -535,13 +543,19 @@ SecurityEvent
 | order by TimeGenerated desc
 ```
 
-<evidence screenshot - KQL results for Event ID 5136 after changing a test GPO setting.>
+![sentinel gpo ad object modification kql results](evidence/46-sentinel-gpo-ad-object-modification-kql-results.png)
 
 This detection shows changes to AD objects that can affect many users or computers.
 
 ### 9.4 New Privileged Role Assignment in Microsoft Entra
 
 Test action: assign a low-risk test role to a lab group if the tenant allows it, then remove it.
+
+![entra directory readers role before assignment](evidence/47-entra-directory-readers-role-before-assignment.png)
+
+![entra directory readers add alice labuser](evidence/48-entra-directory-readers-add-alice-labuser.png)
+
+![entra directory readers assignments alice labuser](evidence/49-entra-directory-readers-assignments-alice-labuser.png)
 
 KQL:
 
@@ -557,7 +571,7 @@ AuditLogs
 | order by TimeGenerated desc
 ```
 
-<evidence screenshot - KQL results for Microsoft Entra privileged role assignment activity after assigning and removing a test role from a lab group.>
+![sentinel entra role assignment auditlogs results](evidence/50-sentinel-entra-role-assignment-auditlogs-results.png)
 
 This detection shows cloud-side privileged role assignment activity.
 
@@ -566,6 +580,8 @@ This detection shows cloud-side privileged role assignment activity.
 Use this only if `SigninLogs` is available in the workspace.
 
 Test action: generate failed sign-ins against a lab user without locking the account.
+
+![entra failed signin test action alice](evidence/51-entra-failed-signin-test-action-alice.png)
 
 KQL:
 
@@ -580,43 +596,11 @@ SigninLogs
 | order by TimeGenerated desc
 ```
 
-<evidence screenshot - KQL results for failed Entra sign-in activity showing failed attempts grouped into a 15-minute window.>
+![sentinel failed signin signinlogs results](evidence/52-sentinel-failed-signin-signinlogs-results.png)
 
 If `SigninLogs` is not available because the tenant lacks P1 or P2, keep this as a design-only detection and explain the licensing limit.
 
-### 9.6 Sentinel Analytic Rule
-
-Turn one validated query into a scheduled analytics rule in Sentinel. Do this after `SecurityEvent` data is visible in Log Analytics.
-
-Recommended first rule: privileged AD group membership changes.
-
-Portal path:
-
-1. Open Microsoft Sentinel for `law-hybrid-identity-lab`.
-2. Go to `Analytics`.
-3. Select `Create` > `Scheduled query rule`.
-4. Name the rule `AD privileged group membership changes`.
-5. Paste the section 9.1 KQL query.
-6. Set query frequency to `1 hour` and lookup period to `1 hour`.
-7. Set alert threshold to generate an alert when query results are greater than `0`.
-8. Leave incident creation enabled.
-9. Create the rule, then repeat the section 9.1 test action to generate an alert or incident.
-
-Terraform path:
-
-1. Keep `deploy_sentinel_analytics = false` for the first apply.
-2. Confirm that `SecurityEvent` has records from `dc01` or `winclient01`.
-3. Set `deploy_sentinel_analytics = true` in `infra/terraform/terraform.tfvars`.
-4. Run Terraform again from `infra/terraform`.
-
-```bash
-terraform plan -out tfplan
-terraform apply tfplan
-```
-
-<evidence screenshot - Sentinel analytic rule or incident generated from one validated lab detection.>
-
-The analytic rule proves that the lab can turn identity activity into an alert workflow.
+These detections show that the lab can turn identity activity into Sentinel query evidence and alert candidates.
 
 ## 10. RBAC, Emergency Access, and Conditional Access Design
 
@@ -684,11 +668,11 @@ Use this checklist as the lab evidence pack.
 - Windows client domain join, `lab_computers` OU move, and `gpresult` output captured in section 6.
 - Hybrid join status and Microsoft Entra device registration captured in section 7.
 - Log Analytics/Sentinel `SecurityEvent` ingestion captured in section 8.
-- <evidence screenshot - KQL results for privileged AD group membership changes after adding and removing a test user.>
-- <evidence screenshot - KQL results for password reset, account disable, or account delete activity against a test user.>
-- <evidence screenshot - KQL results for Event ID 5136 after changing a test GPO setting.>
-- <evidence screenshot - KQL results for Microsoft Entra privileged role assignment activity after assigning and removing a test role from a lab group.>
-- <evidence screenshot - KQL results for failed Entra sign-in activity showing failed attempts grouped into a 15-minute window.>
+- Privileged AD group membership test action and KQL results captured in section 9.1.
+- Password reset and account disable test action and KQL results captured in section 9.2.
+- Test GPO setup and Event ID 5136 KQL results captured in section 9.3.
+- Microsoft Entra Directory Readers assignment flow and AuditLogs KQL results captured in section 9.4.
+- Failed Entra sign-in test action and SigninLogs KQL results captured in section 9.5.
 - <evidence screenshot - Sentinel analytic rule or incident generated from one validated lab detection.>
 - <evidence screenshot - terraform plan showing RBAC role assignments for the synced Microsoft Entra groups.>
 - <evidence screenshot - Entra licensing or Security Defaults page showing why Conditional Access, PIM, or SigninLogs were implemented or documented as design-only.>
