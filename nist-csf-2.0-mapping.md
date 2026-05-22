@@ -1,6 +1,6 @@
 # NIST CSF 2.0 Control Assessment
 
-This document maps the Azure Hybrid Identity Lab to NIST Cybersecurity Framework 2.0.
+This document maps the Azure Hybrid Identity Security Assessment to NIST Cybersecurity Framework 2.0.
 
 ## 1. Scope
 
@@ -31,7 +31,7 @@ Result types:
 
 | ID | Evidence | What it supports |
 | --- | --- | --- |
-| EV-01 | [README.md](README.md) | Lab scope, build steps, identity design, KQL tests, and references. |
+| EV-01 | [README.md](README.md) | Assessment scope, build steps, identity design, KQL tests, and references. |
 | EV-02 | [infra/terraform/main.tf](infra/terraform/main.tf) | Azure resource group, VNet, subnet, NSG, VMs, tags, and RBAC assignment logic. |
 | EV-03 | [infra/terraform/monitoring.tf](infra/terraform/monitoring.tf) | Log Analytics, Sentinel onboarding, Azure Monitor Agent, DCR, and Sentinel analytics rules. |
 | EV-04 | [infra/terraform/policy.tf](infra/terraform/policy.tf) | Custom Azure Policy definitions for required tags. |

@@ -1,6 +1,6 @@
-# Hybrid AD DS and Microsoft Entra Cloud Security Lab
+# Hybrid AD DS and Entra Identity Security Assessment
 
-This lab builds a mini hybrid identity environment with Active Directory Domain Services, Microsoft Entra ID, Microsoft Entra Connect Sync, Log Analytics, and Microsoft Sentinel which is a common security architecture for companies relying on Active Directory.
+This assessment builds a mini hybrid identity environment with Active Directory Domain Services, Microsoft Entra ID, Microsoft Entra Connect Sync, Log Analytics, and Microsoft Sentinel which is a common security architecture for companies relying on Active Directory.
 
 The goal is to show how on-premises identity connects to a cloud control plane, how selected users and groups sync into Microsoft Entra ID, how a Windows client proves domain and hybrid join state, and how identity activity can be monitored with KQL.
 
